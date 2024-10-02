@@ -9,7 +9,7 @@ Utilities for integrating with Vivado
 """
 
 from subprocess import check_call
-from os import makedirs
+from os import makedirs, environ
 from pathlib import Path
 
 
@@ -120,13 +120,16 @@ def _read_compile_order(file_name, fail_on_non_hdl_files):
 def run_vivado(tcl_file_name, tcl_args=None, cwd=None, vivado_path=None):
     """
     Run tcl script in Vivado in batch mode.
-
-    Note: the shell=True is important in windows where Vivado is just a bat file.
     """
-    vivado = "vivado" if vivado_path is None else str(Path(vivado_path).resolve() / "bin" / "vivado")
-    cmd = f"{vivado} -nojournal -nolog -notrace -mode batch -source {str(Path(tcl_file_name).resolve())}"
+    vivado = (
+        str(Path(vivado_path).resolve() / "bin" / "vivado")
+        if vivado_path is not None
+        else environ.get("VUNIT_VIVADO_PATH", "vivado")
+    )
+    cmd = f'"{vivado}" -nojournal -nolog -notrace -mode batch -source "{Path(tcl_file_name).resolve()}"'
     if tcl_args is not None:
-        cmd += " -tclargs " + " ".join([str(val) for val in tcl_args])
+        cmd += " -tclargs " + " ".join([f'"{val}"' for val in tcl_args])
 
     print(cmd)
+    # shell=True is important in Windows where Vivado is just a bat file.
     check_call(cmd, cwd=cwd, shell=True)
